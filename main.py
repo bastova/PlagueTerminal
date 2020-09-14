@@ -22,12 +22,20 @@ class Statics(object):
 
     self.KNIGHT_IMAGE = None
     self.KNIGHT_IMAGE_FULL = None
+    self.KNIGHT_IMAGE_TOKEN = None
+
     self.PRIEST_IMAGE = None
     self.PRIEST_IMAGE_FULL = None
+    self.PRIEST_IMAGE_TOKEN = None
+
     self.PEASANT_IMAGE = None
     self.PEASANT_IMAGE_FULL = None
+    self.PEASANT_IMAGE_TOKEN = None
+
     self.TRADER_IMAGE = None
     self.TRADER_IMAGE_FULL = None
+    self.TRADER_IMAGE_TOKEN = None
+
     self.EVENT_IMAGE = None
     self.CHARACTER_IMAGE = None
     self.PLAGUE_IMAGE = None
@@ -69,14 +77,21 @@ def get_image(image_path):
 
 
 def load_images(statics):
-  statics.KNIGHT_IMAGE = get_image('knight1.png')
-  statics.PRIEST_IMAGE = get_image('priest1.png')
-  statics.PEASANT_IMAGE = get_image('peasant1.png')
-  statics.TRADER_IMAGE = get_image('trader1.png')
-  statics.KNIGHT_IMAGE_FULL = get_image('knight2.png')
-  statics.PRIEST_IMAGE_FULL = get_image('priest2.png')
-  statics.PEASANT_IMAGE_FULL = get_image('peasant2.png')
-  statics.TRADER_IMAGE_FULL = get_image('trader2.png')
+  statics.KNIGHT_IMAGE = get_image('knight2.png')
+  statics.PRIEST_IMAGE = get_image('priest2.png')
+  statics.PEASANT_IMAGE = get_image('peasant2.png')
+  statics.TRADER_IMAGE = get_image('trader2.png')
+
+  statics.KNIGHT_IMAGE_FULL = get_image('knight5.png')
+  statics.PRIEST_IMAGE_FULL = get_image('priest5.png')
+  statics.PEASANT_IMAGE_FULL = get_image('peasant5.png')
+  statics.TRADER_IMAGE_FULL = get_image('trader5.png')
+
+  statics.KNIGHT_IMAGE_TOKEN = get_image('knight0.png')
+  statics.PRIEST_IMAGE_TOKEN = get_image('priest0.png')
+  statics.PEASANT_IMAGE_TOKEN = get_image('peasant0.png')
+  statics.TRADER_IMAGE_TOKEN = get_image('trader0.png')
+
   statics.EVENT_IMAGE = get_image('event1.png')
   statics.CHARACTER_IMAGE = get_image('character1.png')
   statics.PLAGUE_IMAGE = get_image('plague1.png')
