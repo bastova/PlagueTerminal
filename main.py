@@ -61,6 +61,11 @@ class Statics(object):
     self.STARTED = False
     self.MASTER = False
 
+    self.KNIGHT_ANIM_FRAMES = []
+    self.PRIEST_ANIM_FRAMES = []
+    self.TRADER_ANIM_FRAMES = []
+    self.PEASANT_ANIM_FRAMES = []
+
 
 def get_image(image_path):
     image = Image.open(image_path, "r")
@@ -68,6 +73,8 @@ def get_image(image_path):
     pixel_values = list(image.getdata())
     if image.mode == "RGB":
         channels = 3
+    elif image.mode == "RGBA":
+        channels = 3 # Ignore the alpha channel
     elif image.mode == "L":
         channels = 1
     else:
@@ -77,26 +84,26 @@ def get_image(image_path):
 
 
 def load_images(statics):
-  statics.KNIGHT_IMAGE = get_image('knight2.png')
-  statics.PRIEST_IMAGE = get_image('priest2.png')
-  statics.PEASANT_IMAGE = get_image('peasant2.png')
-  statics.TRADER_IMAGE = get_image('trader2.png')
+  statics.KNIGHT_IMAGE = get_image('images/knight2.png')
+  statics.PRIEST_IMAGE = get_image('images/priest2.png')
+  statics.PEASANT_IMAGE = get_image('images/peasant2.png')
+  statics.TRADER_IMAGE = get_image('images/trader2.png')
 
-  statics.KNIGHT_IMAGE_FULL = get_image('knight5.png')
-  statics.PRIEST_IMAGE_FULL = get_image('priest5.png')
-  statics.PEASANT_IMAGE_FULL = get_image('peasant5.png')
-  statics.TRADER_IMAGE_FULL = get_image('trader5.png')
+  statics.KNIGHT_IMAGE_FULL = get_image('images/knight5.png')
+  statics.PRIEST_IMAGE_FULL = get_image('images/priest5.png')
+  statics.PEASANT_IMAGE_FULL = get_image('images/peasant5.png')
+  statics.TRADER_IMAGE_FULL = get_image('images/trader5.png')
 
-  statics.KNIGHT_IMAGE_TOKEN = get_image('knight0.png')
-  statics.PRIEST_IMAGE_TOKEN = get_image('priest0.png')
-  statics.PEASANT_IMAGE_TOKEN = get_image('peasant0.png')
-  statics.TRADER_IMAGE_TOKEN = get_image('trader0.png')
+  statics.KNIGHT_IMAGE_TOKEN = get_image('images/knight0.png')
+  statics.PRIEST_IMAGE_TOKEN = get_image('images/priest0.png')
+  statics.PEASANT_IMAGE_TOKEN = get_image('images/peasant0.png')
+  statics.TRADER_IMAGE_TOKEN = get_image('images/trader0.png')
 
-  statics.EVENT_IMAGE = get_image('event1.png')
-  statics.CHARACTER_IMAGE = get_image('character1.png')
-  statics.PLAGUE_IMAGE = get_image('plague1.png')
-  statics.MAP_IMAGE = get_image('map.png')
-  statics.LANDING_IMAGE = get_image('landing.png')
+  statics.EVENT_IMAGE = get_image('images/event1.png')
+  statics.CHARACTER_IMAGE = get_image('images/character1.png')
+  statics.PLAGUE_IMAGE = get_image('images/plague1.png')
+  statics.MAP_IMAGE = get_image('images/map.png')
+  statics.LANDING_IMAGE = get_image('images/landing.png')
 
 
 def load_cards(statics):
@@ -114,9 +121,18 @@ def load_cards(statics):
     statics.TRIUMPH_CARDS.append(cards.create_triumph_card(triumph_cards_values_range[i]))
 
 
+def load_animation(statics):
+  for i in xrange(21):
+    statics.KNIGHT_ANIM_FRAMES.append(get_image('knight_anim/frames/k{}.png'.format(i)))
+    statics.PRIEST_ANIM_FRAMES.append(get_image('priest_anim/frames/{}.png'.format(i)))
+    statics.TRADER_ANIM_FRAMES.append(get_image('trader_anim/frames/{}.png'.format(i)))
+    statics.PEASANT_ANIM_FRAMES.append(get_image('peasant_anim/frames/{}.png'.format(i)))
+
+
 def load_resources(statics):
   load_images(statics)
   load_cards(statics)
+  load_animation(statics)
 
 
 def key_presses(key):
@@ -125,7 +141,7 @@ def key_presses(key):
 
 
 def exit_program(button):
-  threads.increment_current_thread_id()
+  threads.increment_all_thread_ids()
   # Let all background sync threads die
   time.sleep(2)
   raise urwid.ExitMainLoop()

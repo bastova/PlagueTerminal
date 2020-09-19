@@ -1,17 +1,38 @@
 
-thread_id = 0
+sync_thread_id = 0
+anim_thread_id = 0
 
 
-def get_current_thread_id():
-  global thread_id
-  return thread_id
+def get_sync_thread_id():
+  global sync_thread_id
+  return sync_thread_id
   
 
-def increment_current_thread_id():
-  global thread_id
-  thread_id += 1
+def increment_sync_thread_id():
+  global sync_thread_id
+  sync_thread_id += 1
 
 
-def set_current_thread_id(id):
-  global thread_id
-  thread_id = id
+def set_sync_thread_id(id):
+  global sync_thread_id
+  sync_thread_id = id
+
+
+def get_anim_thread_id():
+  global anim_thread_id
+  return anim_thread_id
+  
+
+def increment_anim_thread_id():
+  global anim_thread_id
+  anim_thread_id += 1
+
+
+def set_anim_thread_id(id):
+  global anim_thread_id
+  anim_thread_id = id
+
+
+def increment_all_thread_ids():
+  increment_sync_thread_id()
+  increment_anim_thread_id()

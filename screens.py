@@ -37,7 +37,10 @@ def _get_image_text(image):
   for y in xrange(0, height, 2):
     for x in xrange(width):
       up = image.getpixel((x, y))
-      down = image.getpixel((x, y + 1))
+      if y + 1 < height:
+        down = image.getpixel((x, y + 1))
+      else:
+        down = up
       c_up = _to_term256_color(up[0], up[1], up[2])
       c_down = _to_term256_color(down[0], down[1], down[2])
       if x == width - 1:
@@ -92,15 +95,24 @@ class BaseScreen(urwid.Pile):
     self.screen_wt = screen_wt
     self.screens = screens
     self.current_menu_screen_id = 0
+    self.animation_frame_counter = 0
     super(BaseScreen, self).__init__(widgets)
 
   def _start_sync(self):
-    threads.increment_current_thread_id()
-    self._thread_id = threads.get_current_thread_id()
+    threads.increment_sync_thread_id()
+    self._sync_thread_id = threads.get_sync_thread_id()
     self._sync()
 
   def _stop_sync(self):
-    threads.increment_current_thread_id()
+    threads.increment_sync_thread_id()
+
+  def _start_anim(self):
+    threads.increment_anim_thread_id()
+    self._anim_thread_id = threads.get_anim_thread_id()
+    self._anim()
+
+  def _stop_anim(self):
+    threads.increment_anim_thread_id()
 
   def _build_button(self, text, func):
     button = urwid.Button(text)
@@ -122,7 +134,7 @@ class BaseScreen(urwid.Pile):
 
   def _sync(self):
     def worker():
-      while self._thread_id == threads.get_current_thread_id():
+      while self._sync_thread_id == threads.get_sync_thread_id():
         self.do_sync()
         self.screen_wt.clear()
         main_loop.get_main_loop().draw_screen()
@@ -133,6 +145,21 @@ class BaseScreen(urwid.Pile):
     return t
 
   def do_sync(self):
+    pass
+
+  def _anim(self):
+    def worker():
+      while self._anim_thread_id == threads.get_anim_thread_id():
+        self.do_anim()
+        self.screen_wt.clear()
+        main_loop.get_main_loop().draw_screen()
+        self.animation_frame_counter += 1
+        time.sleep(0.3)
+
+    t = threading.Thread(target=worker)
+    t.start()
+
+  def do_anim(self):
     pass
 
 
@@ -220,7 +247,10 @@ class CharacterSelectionScreen(BaseScreen):
     self.image = self.statics.KNIGHT_IMAGE_FULL
     self.menu_screens = [self._build_selection_screen, self._build_character_details_screen, self._build_name_screen]
     self.name = ''
+    self.character_details_image_walker = urwid.SimpleFocusListWalker([])
+    self.character_details_image_menu = urwid.ListBox(self.character_details_image_walker)
     self._change_to_menu_screen(0)
+    self._start_anim()
 
   def _build_selection_screen(self):
     body = [get_image_widget(self.statics.LANDING_IMAGE).image(), urwid.Text("Pick your character:"), urwid.Divider()]
@@ -229,7 +259,9 @@ class CharacterSelectionScreen(BaseScreen):
     return urwid.Pile(body)
 
   def _build_character_details_screen(self):
-    body = [get_image_widget(self.image).image(), urwid.Text("Backstory"), urwid.Divider(), urwid.Text(self.statics.CHARACTERS[self.statics.CHARACTER_ID - 1].backstory), urwid.Divider()]
+    body = [urwid.BoxAdapter(self.character_details_image_menu, 44),
+        urwid.Text("Backstory"), urwid.Divider(),
+        urwid.Text(self.statics.CHARACTERS[self.statics.CHARACTER_ID - 1].backstory), urwid.Divider()]
     for c in [("Ok", self._you_sure_ok), ("Back", self._you_sure_back)]:
       body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
     return urwid.Pile(body)
@@ -276,6 +308,20 @@ class CharacterSelectionScreen(BaseScreen):
       self.statics.PLAYERS.append(player)
       self._change_to_screen(LobbyScreen(self.statics, self.screen_wt, self.screens))
 
+  def do_anim(self):
+    self.character_details_image_walker[:] = []
+    anim_frames = self.statics.KNIGHT_ANIM_FRAMES
+    if self.statics.CHARACTER_ID == 1:
+      anim_frames = self.statics.KNIGHT_ANIM_FRAMES
+    elif self.statics.CHARACTER_ID == 2:
+      anim_frames = self.statics.PRIEST_ANIM_FRAMES
+    elif self.statics.CHARACTER_ID == 3:
+      anim_frames = self.statics.PEASANT_ANIM_FRAMES
+    elif self.statics.CHARACTER_ID == 4:
+      anim_frames = self.statics.TRADER_ANIM_FRAMES
+    self.character_details_image_walker.append(get_image_widget(anim_frames[self.animation_frame_counter % 20]).image())
+
+
 
 class LobbyScreen(BaseScreen):
   def __init__(self, statics, screen_wt, screens):
@@ -288,6 +334,7 @@ class LobbyScreen(BaseScreen):
     self.connected_players_menu = urwid.ListBox(self.connected_players_walker)
     self._change_to_menu_screen(0)
     self._start_sync()
+    self._start_anim()
 
   def _build_players_connected_screen(self):
     body = [urwid.Text("Connected players in {}:".format(self.statics.BOARD_ID)), urwid.Divider(),
@@ -315,8 +362,7 @@ class LobbyScreen(BaseScreen):
     connected_players = store.list_players(self.statics.BOARD_DB_NAME)
     self.statics.PLAYERS = []
     players_list = []
-    while len(self.connected_players_walker):
-      self.connected_players_walker.pop(0)
+    self.connected_players_walker[:] = []
     for k in connected_players:
       p = connected_players[k]
       player = players.Player(p['id'], p['name'], p['character'], p['map_tile'])
@@ -386,8 +432,9 @@ class GameScreen(BaseScreen):
     body = [urwid.Columns(player_columns), urwid.Divider(), urwid.BoxAdapter(self.drawn_cards_menu, 20), urwid.Divider(), urwid.Text("Commands:"), urwid.Divider()]
     for c in [("Look at hand", self._look_at_hand),
         ("Look at map", self._look_at_map),
-        ("Add to hand", self._add_to_hand),
-        ("Hold", self._hold)]:
+        ("Add upgraded character cards to hand", self._add_upgraded_cards),
+        ("Add cards to hand", self._add_to_hand),
+        ("Hold cards", self._hold)]:
       body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
     if self.statics.MASTER:
       for c in [("Draw cards", self._draw_cards),
@@ -395,7 +442,8 @@ class GameScreen(BaseScreen):
           ("Trash card", self._trash_card),
           ("Add gold", self._add_gold),
           ("Add points", self._add_points),
-          ("Add plague", self._add_plague)]:
+          ("Add plague", self._add_plague),
+          ("Add plague to map", self._add_plague_to_map)]:
         body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
       body.append(urwid.Edit("> "))
     return urwid.Pile(body)
@@ -405,15 +453,36 @@ class GameScreen(BaseScreen):
     if self.statics.HAND:
       for i in xrange(len(self.statics.HAND.playable_hand)):
         card = self.statics.HAND.playable_hand[i]
-        hand_items.append(get_image_widget(self.statics.CHARACTER_IMAGE).image())
+        image = self.statics.CHARACTER_IMAGE
+        text = ''
+        if card:
+          text = u"{}\n{}\n{}".format(card.name, card.description, card.effect)
+          image = self.statics.CHARACTER_IMAGE
+        else:
+          image = self.statics.PLAGUE_IMAGE
+        hand_items.append(urwid.Columns([get_image_widget(image).image(), urwid.Text(text)]))
     hand_pile = urwid.Pile(hand_items)
     
     hold_items = []
     for card in self.statics.HOLD:
-      hold_items.append(get_image_widget(self.statics.EVENT_IMAGE).image())
+      image = self.statics.EVENT_IMAGE
+      if card.type == 'event':
+        image = self.statics.EVENT_IMAGE
+      elif card.type == 'plague':
+        image = self.statics.PLAGUE_IMAGE
+      elif card.type == 'triumph':
+        image = self.statics.EVENT_IMAGE
+      hold_items.append(urwid.Columns([
+          get_image_widget(image).image(),
+          urwid.Text("{}\n{}".format(card.name, card.effect))]))
     hold_pile = urwid.Pile(hold_items)
     
-    body = [urwid.Columns([hand_pile, hold_pile]), urwid.Text("Commands:"), urwid.Divider()] 
+    body = [urwid.Columns([hand_pile, hold_pile]), urwid.Text("Play card:"), urwid.Divider()]
+    for c in [("1", self._play_card), ("2", self._play_card), ("3", self._play_card), ("4", self._play_card), ("5", self._play_card)]:
+      body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
+    body.extend([urwid.Text("Unhold card:"), urwid.Divider()])
+    for c in [("1", self._unhold_card), ("2", self._unhold_card), ("3", self._unhold_card), ("4", self._unhold_card), ("5", self._unhold_card)]:
+      body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
     for c in [("Back", self._hand_back)]:
       body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
     return urwid.Pile(body)
@@ -432,11 +501,22 @@ class GameScreen(BaseScreen):
   def _look_at_map(self, button, choice):
     self._change_to_menu_screen(2)
   
+  def _add_upgraded_cards(self, button, choice):
+    self.statics.HAND.add(self.statics.UPGRADED_CARDS)
+
   def _add_to_hand(self, button, choice):
-    pass
+    self.statics.HAND.add(self.drawn_cards)
 
   def _hold(self, button, choice):
-    pass
+    self.statics.HOLD += self.drawn_cards
+
+  def _play_card(self, button, choice):
+    self.statics.HAND.play(int(choice) - 1)
+
+  def _unhold_card(self, button, choice):
+    id = int(choice)
+    if id < len(self.statics.HOLD):
+      self.statics.HOLD = self.statics.HOLD[:id] + self.statics.HOLD[id+1:]
 
   def _hand_back(self, button, choice):
     self._change_to_menu_screen(0)
@@ -478,11 +558,13 @@ class GameScreen(BaseScreen):
   def _add_plague(self, button, choice):
     pass
 
+  def _add_plague_to_map(self, button, choice):
+    pass
+
   def do_sync(self):
     connected_players = store.list_players(self.statics.BOARD_DB_NAME)
     self.statics.PLAYERS = []
-    while len(self.map_walker):
-      self.map_walker.pop(0)
+    self.map_walker[:] = []
     for k in connected_players:
       p = connected_players[k]
       player = players.Player(p['id'], p['name'], p['character'], p['map_tile'])
@@ -500,18 +582,14 @@ class GameScreen(BaseScreen):
         image_token = self.statics.KNIGHT_IMAGE_TOKEN
         x = -12
         y = -6
-        player_image_widget_pos_list.append((get_image_widget(self.statics.KNIGHT_IMAGE_TOKEN), 4, 4))
       elif player.character_id == 2:
         image_token = self.statics.PRIEST_IMAGE_TOKEN
         y = -6
-        player_image_widget_pos_list.append((get_image_widget(self.statics.PRIEST_IMAGE_TOKEN), 16, 4))
       elif player.character_id == 3:
         image_token = self.statics.PEASANT_IMAGE_TOKEN
         x = -12
-        player_image_widget_pos_list.append((get_image_widget(self.statics.PEASANT_IMAGE_TOKEN), 4, 10))
       elif player.character_id == 4:
         image_token = self.statics.TRADER_IMAGE_TOKEN
-        player_image_widget_pos_list.append((get_image_widget(self.statics.TRADER_IMAGE_TOKEN), 16, 10))
       center_x = 0
       center_y = 0
       if player.map_tile == 1:
@@ -541,8 +619,7 @@ class GameScreen(BaseScreen):
 
     drawn_cards = store.list_cards(self.statics.BOARD_DB_NAME)
     self.drawn_cards = []
-    while len(self.drawn_cards_walker):
-      self.drawn_cards_walker.pop(0)
+    self.drawn_cards_walker[:] = []
     for k in drawn_cards:
       drawn_card = drawn_cards[k]
       if drawn_card['type'] == 'event':
