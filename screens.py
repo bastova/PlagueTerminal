@@ -169,13 +169,13 @@ class LoginScreen(BaseScreen):
     self.menu_screens_walker = urwid.SimpleFocusListWalker([])
     self.menu = urwid.BoxAdapter(urwid.ListBox(self.menu_screens_walker), 10)
     super(LoginScreen, self).__init__(statics, screen_wt, screens, [urwid.Padding(wt) for wt in [self.header, self.menu]])
-    self.menu_screens = [self._build_start_screen, self._build_new_board_screen, self._build_connect_to_board_screen]
+    self.menu_screens = [self._build_start_screen, self._build_new_board_screen, self._build_connect_to_board_screen, self._build_reconnect_to_board_screen]
     self.board_name = ''
     self._change_to_menu_screen(0)
 
   def _build_start_screen(self):
     body = [urwid.Text("Select board:"), urwid.Divider()]
-    for c in [("New board", self._new_board), ("Connect to board", self._connect_to_board)]:
+    for c in [("New board", self._new_board), ("Connect to board", self._connect_to_board), ("Reconnect to board", self._reconnect_to_board)]:
       body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
     return urwid.Pile(body)
 
@@ -193,6 +193,17 @@ class LoginScreen(BaseScreen):
   def _build_connect_to_board_screen(self):
     body = [urwid.Text("Connect to Board"), urwid.Divider()]
     for c in [("Ok", self._connect_to_board_ok), ("Back", self._connect_to_board_back)]:
+      body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
+    input_ = urwid.Edit("> ")
+    urwid.connect_signal(input_, 'change', self._on_board_name_change)
+    body.append(input_)
+    result = urwid.Pile(body)
+    result.focus_position = len(result.contents) - 1
+    return result
+
+  def _build_reconnect_to_board_screen(self):
+    body = [urwid.Text("Reconnect to Board"), urwid.Divider()]
+    for c in [("Ok", self._reconnect_to_board_ok), ("Back", self._reconnect_to_board_back)]:
       body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
     input_ = urwid.Edit("> ")
     urwid.connect_signal(input_, 'change', self._on_board_name_change)
@@ -234,6 +245,46 @@ class LoginScreen(BaseScreen):
     self._change_to_screen(CharacterSelectionScreen(self.statics, self.screen_wt, self.screens))
 
   def _connect_to_board_back(self, button, choice):
+    self.board_name = ''
+    self._change_to_menu_screen(0)
+
+  def _reconnect_to_board(self, button, choice):
+    self._change_to_menu_screen(3)
+
+  def _reconnect_to_board_ok(self, button, choice):
+    try:
+      if not self.board_name:
+        return
+      parts = self.board_name.split(',')
+      board_id = int(parts[0])
+      player_name = int(parts[1])
+      if len(parts) == 3:
+        self.statics.MASTER = True
+      self.statics.BOARD_ID = board_id
+      self.statics.BOARD_DB_NAME = store.get_board(self.statics.BOARD_ID)
+      if not self.statics.BOARD_DB_NAME:
+        return
+      connected_players = store.list_players(self.statics.BOARD_DB_NAME)
+      self.statics.PLAYERS = []
+      self.connected_players_walker[:] = []
+      for k in connected_players:
+        p = connected_players[k]
+        player = players.Player(p['id'], p['name'], p['character'], p['map_tile'])
+        player.gold = p['gold']
+        player.points = p['points']
+        player.plague = p['plague']
+        player.db_name = k
+        self.statics.PLAYERS.append(player)
+        if player.name == player_name:
+          self.statics.PLAYER_ID = player.id
+          self.statics.CHARACTER_ID = player.character_id
+      if not self.statics.PLAYER_ID:
+        return
+      self._change_to_screen(LobbyScreen(self.statics, self.screen_wt, self.screens))
+    except:
+      pass
+
+  def _reconnect_to_board_back(self, button, choice):
     self.board_name = ''
     self._change_to_menu_screen(0)
 
