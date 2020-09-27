@@ -600,7 +600,10 @@ class GameScreen(BaseScreen):
       id = 5
     elif choice == 'Farm':
       id = 6
-    store.move_player(self.statics.BOARD_DB_NAME, self.statics.PLAYERS[0].db_name, id)
+    for p in self.statics.PLAYERS:
+      if p.id == self.statics.PLAYER_ID:
+        store.move_player(self.statics.BOARD_DB_NAME, self.statics.PLAYERS[0].db_name, id)
+        break
 
   def _map_back(self, button, choice):
     self._change_to_menu_screen(0)
@@ -697,8 +700,12 @@ class GameScreen(BaseScreen):
       player_image_widget_pos_list.append((get_image_widget(image_token), center_x + x, center_y + y))
     map_ = get_layered_image_widget(get_image_widget(self.statics.MAP_IMAGE),
       image_widget_pos_list=player_image_widget_pos_list,
-      text_pos_list=[(' Church ', 10, 19), (' Harbour ', 44, 19), (' Castle ', 77, 19),
-          (' Market ', 10, 38), (' Village ', 44, 38), (' Farm ', 77, 38)]).image()
+      text_pos_list=[(' Church: {} '.format(self.statics.MAP_PLAGUE[0]), 10, 19),
+        (' Harbour: {} '.format(self.statics.MAP_PLAGUE[1]), 44, 19),
+        (' Castle: {} '.format(self.statics.MAP_PLAGUE[2]), 77, 19),
+        (' Market: {} '.format(self.statics.MAP_PLAGUE[3]), 10, 38),
+        (' Village : {} '.format(self.statics.MAP_PLAGUE[4]), 44, 38),
+        (' Farm: {} '.format(self.statics.MAP_PLAGUE[5]), 77, 38)]).image()
     self.map_walker.append(map_)
 
     drawn_cards = store.list_cards(self.statics.BOARD_DB_NAME)
