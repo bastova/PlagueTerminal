@@ -408,6 +408,8 @@ class GameScreen(BaseScreen):
       self.statics.UPGRADED_CARDS.append(self.statics.CHARACTER_CARDS[id])
     self.statics.HAND = decks.Hand(hand)
     self.statics.HAND.draw(5)
+    self.command = ''
+    self.input_ = None
     self._change_to_menu_screen(0)
     self._start_sync()
 
@@ -443,9 +445,14 @@ class GameScreen(BaseScreen):
           ("Add gold", self._add_gold),
           ("Add points", self._add_points),
           ("Add plague", self._add_plague),
-          ("Add plague to map", self._add_plague_to_map)]:
+          ("Add plague to map", self._add_plague_to_map),
+          ("Shuffle deck", self._shuffle),
+          ("Put back card", self._put_back_card),
+          ("Add cards to deck", self._add_cards_to_deck)]:
         body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
-      body.append(urwid.Edit("> "))
+      self.input_ = urwid.Edit("> ")
+      urwid.connect_signal(self.input_, 'change', self._on_command_change)
+      body.append(self.input_)
     return urwid.Pile(body)
 
   def _build_hand_screen(self):
@@ -495,6 +502,13 @@ class GameScreen(BaseScreen):
     body.extend([urwid.Divider(), urwid.AttrMap(self._build_button("Back", self._map_back), None, focus_map='reversed')])
     return urwid.Pile(body)
 
+  def _on_command_change(self, edit, new_edit_text):
+   self.command = new_edit_text
+
+  def _reset_command(self):
+    self.input_.set_edit_text('')
+    self.comamnd = ''
+
   def _look_at_hand(self, button, choice):
     self._change_to_menu_screen(1)
 
@@ -541,25 +555,44 @@ class GameScreen(BaseScreen):
     self._change_to_menu_screen(0)
 
   def _draw_cards(self, button, choice):
-    master_commands.draw_cards(self.statics, 2, self)
+    master_commands.draw_cards(self.statics, self.command, self)
+    self._reset_command()
 
   def _discard_card(self, button, choice):
-    pass
+    master_commands.discard_card(self.statics, self.command, self)
+    self._reset_command()
 
   def _trash_card(self, button, choice):
-    pass
+    master_commands.trash_card(self.statics, self.command, self)
+    self._reset_command()
+
+  def _put_back_card(self, button, choice):
+    master_commands.put_back_card(self.statics, self.command, self)
+    self._reset_command()
+
+  def _add_cards_to_deck(self, button, choice):
+    master_commands.add_cards_to_deck(self.statics, self.command, self)
+    self._reset_command()
+
+  def _shuffle(self, button, choice):
+    master_commands.shuffle(self.statics, self)
+    self._reset_command()
 
   def _add_gold(self, button, choice):
-    pass
+    master_commands.add_gold(self.statics, self.command)
+    self._reset_command()
 
   def _add_points(self, button, choice):
-    pass
+    master_commands.add_points(self.statics, self.command)
+    self._reset_command()
 
   def _add_plague(self, button, choice):
-    pass
+    master_commands.add_plague(self.statics, self.command)
+    self._reset_command()
 
   def _add_plague_to_map(self, button, choice):
-    pass
+    master_commands.add_plague_to_map(self.statics, self.command)
+    self._reset_command()
 
   def do_sync(self):
     connected_players = store.list_players(self.statics.BOARD_DB_NAME)
