@@ -602,7 +602,7 @@ class GameScreen(BaseScreen):
       id = 6
     for p in self.statics.PLAYERS:
       if p.id == self.statics.PLAYER_ID:
-        store.move_player(self.statics.BOARD_DB_NAME, self.statics.PLAYERS[0].db_name, id)
+        store.move_player(self.statics.BOARD_DB_NAME, p.db_name, id)
         break
 
   def _map_back(self, button, choice):
