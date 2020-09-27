@@ -110,13 +110,13 @@ def load_cards(statics):
   event_cards_values_range = sheets_connector.get_range(sheets_connector.EVENTS_SHEET_NAME, 2, 25, 0, 4)
   for i in range(len(event_cards_values_range)):
     statics.EVENT_CARDS.append(cards.create_event_card(i, event_cards_values_range[i]))
-  plague_cards_values_range = sheets_connector.get_range(sheets_connector.PLAGUE_SHEET_NAME, 2, 11, 0, 1)
+  plague_cards_values_range = sheets_connector.get_range(sheets_connector.PLAGUE_SHEET_NAME, 2, 12, 0, 1)
   for i in range(len(plague_cards_values_range)):
     statics.PLAGUE_CARDS.append(cards.create_plague_card(i, plague_cards_values_range[i]))
-  character_cards_values_range = sheets_connector.get_range(sheets_connector.CHARACTERS_SHEET_NAME, 2, 35, 0, 7)
+  character_cards_values_range = sheets_connector.get_range(sheets_connector.CHARACTERS_SHEET_NAME, 2, 33, 0, 7)
   for i in range(len(character_cards_values_range)):
     statics.CHARACTER_CARDS.append(cards.create_character_card(character_cards_values_range[i]))
-  triumph_cards_values_range = sheets_connector.get_range(sheets_connector.TRIUMPHS_SHEET_NAME, 2, 11, 0, 5)
+  triumph_cards_values_range = sheets_connector.get_range(sheets_connector.TRIUMPHS_SHEET_NAME, 2, 10, 0, 5)
   for i in range(len(triumph_cards_values_range)):
     statics.TRIUMPH_CARDS.append(cards.create_triumph_card(triumph_cards_values_range[i]))
 

@@ -450,8 +450,8 @@ class GameScreen(BaseScreen):
       hand_ids = [16, 17, 18, 19, 20]
       upgraded_ids = [21, 22, 23]
     elif self.statics.CHARACTER_ID == 4:
-      hand_ids = [25, 26, 27, 28, 29]
-      upgraded_ids = [30, 31, 32]
+      hand_ids = [24, 25, 26, 27, 28]
+      upgraded_ids = [29, 30, 31]
     hand = []
     for id in hand_ids:
       hand.append(self.statics.CHARACTER_CARDS[id])
