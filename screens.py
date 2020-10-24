@@ -133,16 +133,21 @@ class BaseScreen(urwid.Pile):
     self.screens.append(target_screen)
 
   def _sync(self):
-    def worker():
+    def worker(initial_sleep_time, sleep_time):
+      time.sleep(initial_sleep_time)
       while self._sync_thread_id == threads.get_sync_thread_id():
-        self.do_sync()
-        self.screen_wt.clear()
-        main_loop.get_main_loop().draw_screen()
-        time.sleep(2)
+        if store.should_sync(store.get_commit_timestamp()):
+          self.do_sync()
+          self.screen_wt.clear()
+          main_loop.get_main_loop().draw_screen()
+        time.sleep(sleep_time)
 
-    t = threading.Thread(target=worker)
-    t.start()
-    return t
+    n = 3
+    sleep_time = 2
+    offset_time = float(sleep_time) / n
+    for i in xrange(n):
+      t = threading.Thread(target=worker, args=(i * offset_time, sleep_time))
+      t.start()
 
   def do_sync(self):
     pass
@@ -256,8 +261,8 @@ class LoginScreen(BaseScreen):
       if not self.board_name:
         return
       parts = self.board_name.split(',')
-      board_id = int(parts[0])
-      player_name = int(parts[1])
+      board_id = parts[0]
+      player_name = parts[1]
       if len(parts) == 3:
         self.statics.MASTER = True
       self.statics.BOARD_ID = board_id
@@ -266,14 +271,8 @@ class LoginScreen(BaseScreen):
         return
       connected_players = store.list_players(self.statics.BOARD_DB_NAME)
       self.statics.PLAYERS = []
-      self.connected_players_walker[:] = []
       for k in connected_players:
-        p = connected_players[k]
-        player = players.Player(p['id'], p['name'], p['character'], p['map_tile'])
-        player.gold = p['gold']
-        player.points = p['points']
-        player.plague = p['plague']
-        player.db_name = k
+        player = players.from_db(connected_players, k)
         self.statics.PLAYERS.append(player)
         if player.name == player_name:
           self.statics.PLAYER_ID = player.id
@@ -404,6 +403,9 @@ class LobbyScreen(BaseScreen):
     self._change_to_menu_screen(1)
 
   def _you_sure_ok(self, button, choice):
+    if self.statics.MASTER:
+      self.statics.STARTED = True
+      store.set_started(self.statics.BOARD_DB_NAME, True)
     self._change_to_screen(GameScreen(self.statics, self.screen_wt, self.screens))
 
   def _you_sure_back(self, button, choice):
@@ -415,12 +417,7 @@ class LobbyScreen(BaseScreen):
     players_list = []
     self.connected_players_walker[:] = []
     for k in connected_players:
-      p = connected_players[k]
-      player = players.Player(p['id'], p['name'], p['character'], p['map_tile'])
-      player.gold = p['gold']
-      player.points = p['points']
-      player.plague = p['plague']
-      player.db_name = k
+      player = players.from_db(connected_players, k)
       self.statics.PLAYERS.append(player)
       players_list.append(urwid.Text("Player {} connected".format(player.name)))
     self.connected_players_walker.extend(players_list + [urwid.Divider()])
@@ -579,7 +576,7 @@ class GameScreen(BaseScreen):
     self.statics.HAND.play(int(choice) - 1)
 
   def _unhold_card(self, button, choice):
-    id = int(choice)
+    id = int(choice) - 1
     if id < len(self.statics.HOLD):
       self.statics.HOLD = self.statics.HOLD[:id] + self.statics.HOLD[id+1:]
 
@@ -649,16 +646,20 @@ class GameScreen(BaseScreen):
     self._reset_command()
 
   def do_sync(self):
+    # TODO: have a huge try-catch
+    # TODO: move flip cards further in the menu
+    # TODO: triumph cards need better indication
+    # TODO: hold cards from hand
+    # TODO: held cards in game menu
+
+    self.map_walker[:] = []
+    map_tiles = store.list_map_tiles(self.statics.BOARD_DB_NAME)
+    for i in xrange(len(map_tiles)):
+      self.statics.MAP_PLAGUE[i - 1] = map_tiles[i]
     connected_players = store.list_players(self.statics.BOARD_DB_NAME)
     self.statics.PLAYERS = []
-    self.map_walker[:] = []
     for k in connected_players:
-      p = connected_players[k]
-      player = players.Player(p['id'], p['name'], p['character'], p['map_tile'])
-      player.gold = p['gold']
-      player.points = p['points']
-      player.plague = p['plague']
-      player.db_name = k
+      player = players.from_db(connected_players, k)
       self.statics.PLAYERS.append(player)
     player_image_widget_pos_list = []
     for player in self.statics.PLAYERS:

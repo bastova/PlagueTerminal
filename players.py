@@ -26,3 +26,12 @@ class Player(object):
 
   def __repr__(self):
     return self.name
+
+def from_db(connected_players, k):
+  p = connected_players[k]
+  player = Player(p['id'], p['name'], p['character'], p['map_tile'])
+  player.gold = p['gold']
+  player.points = p['points']
+  player.plague = p['plague']
+  player.db_name = k
+  return player
