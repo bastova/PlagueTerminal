@@ -479,15 +479,32 @@ class GameScreen(BaseScreen):
           urwid.Text('Points: {}'.format(player.points)),
           urwid.Text('Plague: {}'.format(player.plague)),
           urwid.Text('Map tile: {}'.format(player.map_tile))]))
-    body = [urwid.Columns(player_columns), urwid.Divider(), urwid.BoxAdapter(self.drawn_cards_menu, 20), urwid.Divider(), urwid.Text("Commands:"), urwid.Divider()]
-    for c in [("Look at hand", self._look_at_hand),
+
+    hold_items = []
+    for card in self.statics.HOLD:
+      image = self.statics.EVENT_IMAGE
+      if card.type == 'event':
+        image = self.statics.EVENT_IMAGE
+      elif card.type == 'plague':
+        image = self.statics.PLAGUE_IMAGE
+      elif card.type == 'triumph':
+        image = self.statics.TRIUMPH_IMAGE
+      hold_items.append(urwid.LineBox(urwid.Columns([
+          get_image_widget(image).image(),
+          urwid.Text("{}\n{}".format(card.name, card.effect))])))
+    hold_pile = urwid.Pile(hold_items)
+
+    body = [urwid.Columns(player_columns), urwid.Columns([urwid.BoxAdapter(self.drawn_cards_menu, 22), hold_pile])]
+    body.extend([urwid.Text("Commands:"), urwid.Divider()])
+    general_commands_pile = [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for 
+      c in [("Look at hand", self._look_at_hand),
         ("Look at map", self._look_at_map),
         ("Add upgraded character cards to hand", self._add_upgraded_cards),
         ("Add cards to hand", self._add_to_hand),
-        ("Hold cards", self._hold)]:
-      body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
+        ("Hold cards", self._hold)]]
     if self.statics.MASTER:
-      for c in [("Draw cards", self._draw_cards),
+      master_commands_pile = [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for
+        c in [("Draw cards", self._draw_cards),
           ("Discard card", self._discard_card),
           ("Trash card", self._trash_card),
           ("Add gold", self._add_gold),
@@ -496,11 +513,13 @@ class GameScreen(BaseScreen):
           ("Add plague to map", self._add_plague_to_map),
           ("Shuffle deck", self._shuffle),
           ("Put back card", self._put_back_card),
-          ("Add cards to deck", self._add_cards_to_deck)]:
-        body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
-      self.input_ = urwid.Edit("> ")
-      urwid.connect_signal(self.input_, 'change', self._on_command_change)
-      body.append(self.input_)
+          ("Add cards to deck", self._add_cards_to_deck)]]
+      body.append(urwid.Columns([urwid.Pile(general_commands_pile), urwid.Pile(master_commands_pile)]))
+    else:
+      body.append(urwid.Pile(general_commands_pile))
+    self.input_ = urwid.Edit("> ")
+    urwid.connect_signal(self.input_, 'change', self._on_command_change)
+    body.append(self.input_)
     return urwid.Pile(body)
 
   def _build_hand_screen(self):
@@ -512,10 +531,13 @@ class GameScreen(BaseScreen):
         text = ''
         if card:
           text = u"{}\n{}\n{}".format(card.name, card.description, card.effect)
-          image = self.statics.CHARACTER_IMAGE
+          if card.type == 'character':
+            image = self.statics.CHARACTER_IMAGE
+          elif card.type == 'triumph':
+            image = self.statics.TRIUMPH_IMAGE
         else:
           image = self.statics.PLAGUE_IMAGE
-        hand_items.append(urwid.Columns([get_image_widget(image).image(), urwid.Text(text)]))
+        hand_items.append(urwid.LineBox(urwid.Columns([get_image_widget(image).image(), urwid.Text(text)])))
     hand_pile = urwid.Pile(hand_items)
     
     hold_items = []
@@ -526,18 +548,17 @@ class GameScreen(BaseScreen):
       elif card.type == 'plague':
         image = self.statics.PLAGUE_IMAGE
       elif card.type == 'triumph':
-        image = self.statics.EVENT_IMAGE
-      hold_items.append(urwid.Columns([
+        image = self.statics.TRIUMPH_IMAGE
+      hold_items.append(urwid.LineBox(urwid.Columns([
           get_image_widget(image).image(),
-          urwid.Text("{}\n{}".format(card.name, card.effect))]))
+          urwid.Text("{}\n{}".format(card.name, card.effect))])))
     hold_pile = urwid.Pile(hold_items)
-    
-    body = [urwid.Columns([hand_pile, hold_pile]), urwid.Text("Play card:"), urwid.Divider()]
-    for c in [("1", self._play_card), ("2", self._play_card), ("3", self._play_card), ("4", self._play_card), ("5", self._play_card)]:
-      body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
-    body.extend([urwid.Text("Unhold card:"), urwid.Divider()])
-    for c in [("1", self._unhold_card), ("2", self._unhold_card), ("3", self._unhold_card), ("4", self._unhold_card), ("5", self._unhold_card)]:
-      body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
+    body = [urwid.Columns([hand_pile, hold_pile])]
+    play_cards_pile = [urwid.Text("Play card:")] + [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for
+      c in [("1", self._play_card), ("2", self._play_card), ("3", self._play_card), ("4", self._play_card), ("5", self._play_card)]]
+    unhold_cards_pile = [urwid.Text("Unhold card:")] + [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for
+      c in [("1", self._unhold_card), ("2", self._unhold_card), ("3", self._unhold_card), ("4", self._unhold_card), ("5", self._unhold_card)]]
+    body.append(urwid.Columns([urwid.Pile(play_cards_pile), urwid.Pile(unhold_cards_pile)]))
     for c in [("Back", self._hand_back)]:
       body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
     return urwid.Pile(body)
@@ -564,13 +585,19 @@ class GameScreen(BaseScreen):
     self._change_to_menu_screen(2)
   
   def _add_upgraded_cards(self, button, choice):
-    self.statics.HAND.add(self.statics.UPGRADED_CARDS)
+    if self.command == 'y':
+      self.statics.HAND.add(self.statics.UPGRADED_CARDS)
+      self._reset_command()
 
   def _add_to_hand(self, button, choice):
-    self.statics.HAND.add(self.drawn_cards)
+    if self.command == 'y':
+      self.statics.HAND.add(self.drawn_cards)
+      self._reset_command()
 
   def _hold(self, button, choice):
-    self.statics.HOLD += self.drawn_cards
+    if self.command == 'y':
+      self.statics.HOLD += self.drawn_cards
+      self._reset_command()
 
   def _play_card(self, button, choice):
     self.statics.HAND.play(int(choice) - 1)
@@ -647,11 +674,7 @@ class GameScreen(BaseScreen):
 
   def do_sync(self):
     # TODO: have a huge try-catch
-    # TODO: move flip cards further in the menu
-    # TODO: triumph cards need better indication
     # TODO: hold cards from hand
-    # TODO: held cards in game menu
-
     self.map_walker[:] = []
     map_tiles = store.list_map_tiles(self.statics.BOARD_DB_NAME)
     for i in xrange(len(map_tiles)):
@@ -727,7 +750,7 @@ class GameScreen(BaseScreen):
       elif drawn_card['type'] == 'triumph':
         card = self.statics.TRIUMPH_CARDS[int(drawn_card['id'])]
         self.drawn_cards.append(card)
-        image = self.statics.EVENT_IMAGE
+        image = self.statics.TRIUMPH_IMAGE
         text = "{}\n{}\n{}\n{}".format(card.name, card.description, card.effect, card.cost)
-      self.drawn_cards_walker.append(urwid.Columns([get_image_widget(image).image(), urwid.Text(text)]))
+      self.drawn_cards_walker.append(urwid.LineBox(urwid.Columns([get_image_widget(image).image(), urwid.Text(text)])))
 

@@ -39,6 +39,7 @@ class Statics(object):
     self.EVENT_IMAGE = None
     self.CHARACTER_IMAGE = None
     self.PLAGUE_IMAGE = None
+    self.TRIUMPH_IMAGE = None
     self.MAP_IMAGE = None
     self.LANDING_IMAGE = None
 
@@ -102,6 +103,7 @@ def load_images(statics):
   statics.EVENT_IMAGE = get_image('images/event1.png')
   statics.CHARACTER_IMAGE = get_image('images/character1.png')
   statics.PLAGUE_IMAGE = get_image('images/plague1.png')
+  statics.TRIUMPH_IMAGE = get_image('images/triumph1.png')
   statics.MAP_IMAGE = get_image('images/map.png')
   statics.LANDING_IMAGE = get_image('images/landing.png')
 
