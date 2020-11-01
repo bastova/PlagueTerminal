@@ -461,7 +461,7 @@ class GameScreen(BaseScreen):
     self._change_to_menu_screen(0)
     self._start_sync()
 
-  def _build_game_screen(self):
+  def _player_columns(self):
     player_columns = []
     for player in self.statics.PLAYERS:
       image = self.statics.KNIGHT_IMAGE
@@ -479,7 +479,9 @@ class GameScreen(BaseScreen):
           urwid.Text('Points: {}'.format(player.points)),
           urwid.Text('Plague: {}'.format(player.plague)),
           urwid.Text('Map tile: {}'.format(player.map_tile))]))
+    return player_columns
 
+  def _build_game_screen(self):
     hold_items = []
     for card in self.statics.HOLD:
       image = self.statics.EVENT_IMAGE
@@ -494,7 +496,7 @@ class GameScreen(BaseScreen):
           urwid.Text("{}\n{}".format(card.name, card.effect))])))
     hold_pile = urwid.Pile(hold_items)
 
-    body = [urwid.Columns(player_columns), urwid.Columns([urwid.BoxAdapter(self.drawn_cards_menu, 22), hold_pile])]
+    body = [urwid.Columns(self._player_columns()), urwid.Columns([urwid.BoxAdapter(self.drawn_cards_menu, 22), hold_pile])]
     body.extend([urwid.Text("Commands:"), urwid.Divider()])
     general_commands_pile = [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for 
       c in [("Look at hand", self._look_at_hand),
@@ -556,19 +558,21 @@ class GameScreen(BaseScreen):
     body = [urwid.Columns([hand_pile, hold_pile])]
     play_cards_pile = [urwid.Text("Play card:")] + [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for
       c in [("1", self._play_card), ("2", self._play_card), ("3", self._play_card), ("4", self._play_card), ("5", self._play_card)]]
+    trash_cards_pile = [urwid.Text("Trash card:")] + [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for
+      c in [("1", self._trash_hand_card), ("2", self._trash_hand_card), ("3", self._trash_hand_card), ("4", self._trash_hand_card), ("5", self._trash_hand_card)]]
     unhold_cards_pile = [urwid.Text("Unhold card:")] + [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for
       c in [("1", self._unhold_card), ("2", self._unhold_card), ("3", self._unhold_card), ("4", self._unhold_card), ("5", self._unhold_card)]]
-    body.append(urwid.Columns([urwid.Pile(play_cards_pile), urwid.Pile(unhold_cards_pile)]))
+    body.append(urwid.Columns([urwid.Pile(play_cards_pile), urwid.Pile(unhold_cards_pile), urwid.Pile(trash_cards_pile)]))
     for c in [("Back", self._hand_back)]:
       body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
     return urwid.Pile(body)
 
   def _build_map_screen(self):
-    body = [urwid.BoxAdapter(self.map_menu, 42), urwid.Divider(), urwid.Text("Move to:"), urwid.Divider()]
-    for c in [("Church", self._map_move), ("Harbour", self._map_move), ("Castle", self._map_move),
-        ("Market", self._map_move), ("Village", self._map_move), ("Farm", self._map_move)]:
-      body.append(urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed'))
-    body.extend([urwid.Divider(), urwid.AttrMap(self._build_button("Back", self._map_back), None, focus_map='reversed')])
+    move_pile = [urwid.Text("Move to:"), urwid.Divider()] + [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for
+      c in [("Church", self._map_move), ("Harbour", self._map_move), ("Castle", self._map_move),
+        ("Market", self._map_move), ("Village", self._map_move), ("Farm", self._map_move)]]
+    body = [urwid.Columns(self._player_columns()), urwid.Columns([urwid.BoxAdapter(self.map_menu, 42), urwid.Pile(move_pile)]),
+      urwid.Divider(), urwid.AttrMap(self._build_button("Back", self._map_back), None, focus_map='reversed')]
     return urwid.Pile(body)
 
   def _on_command_change(self, edit, new_edit_text):
@@ -601,6 +605,9 @@ class GameScreen(BaseScreen):
 
   def _play_card(self, button, choice):
     self.statics.HAND.play(int(choice) - 1)
+
+  def _trash_hand_card(self, button, choice):
+    self.statics.HAND.trash(int(choice) - 1)
 
   def _unhold_card(self, button, choice):
     id = int(choice) - 1
@@ -675,6 +682,7 @@ class GameScreen(BaseScreen):
   def do_sync(self):
     # TODO: have a huge try-catch
     # TODO: hold cards from hand
+    # TODO: add characters to map screen, and add extra counts to the map for better plague tracking.
     self.map_walker[:] = []
     map_tiles = store.list_map_tiles(self.statics.BOARD_DB_NAME)
     for i in xrange(len(map_tiles)):
@@ -722,14 +730,27 @@ class GameScreen(BaseScreen):
         center_x = 84
         center_y = 30
       player_image_widget_pos_list.append((get_image_widget(image_token), center_x + x, center_y + y))
+    my_plague = sum([p.plague for p in self.statics.PLAYERS if p.id == self.statics.PLAYER_ID])
     map_ = get_layered_image_widget(get_image_widget(self.statics.MAP_IMAGE),
       image_widget_pos_list=player_image_widget_pos_list,
-      text_pos_list=[(' Church: {} '.format(self.statics.MAP_PLAGUE[0]), 10, 19),
-        (' Harbour: {} '.format(self.statics.MAP_PLAGUE[1]), 44, 19),
-        (' Castle: {} '.format(self.statics.MAP_PLAGUE[2]), 77, 19),
-        (' Market: {} '.format(self.statics.MAP_PLAGUE[3]), 10, 38),
-        (' Village : {} '.format(self.statics.MAP_PLAGUE[4]), 44, 38),
-        (' Farm: {} '.format(self.statics.MAP_PLAGUE[5]), 77, 38)]).image()
+      text_pos_list=[('Church. m: {}, t: {}, i: {} '.format(self.statics.MAP_PLAGUE[0],
+          self.statics.MAP_PLAGUE[0] + sum([p.plague for p in self.statics.PLAYERS if p.map_tile == 1]),
+          sum([p.plague for p in self.statics.PLAYERS if p.id == self.statics.PLAYER_ID and p.map_tile == 1])), 0, 19),
+        ('Harbour. m: {}, t: {}, i: {} '.format(self.statics.MAP_PLAGUE[1],
+          self.statics.MAP_PLAGUE[1] + sum([p.plague for p in self.statics.PLAYERS if p.map_tile == 2]),
+          sum([p.plague for p in self.statics.PLAYERS if p.id == self.statics.PLAYER_ID and p.map_tile == 2])), 33, 19),
+        ('Castle. m: {}, t: {}, i: {} '.format(self.statics.MAP_PLAGUE[2],
+          self.statics.MAP_PLAGUE[2] + sum([p.plague for p in self.statics.PLAYERS if p.map_tile == 3]),
+          sum([p.plague for p in self.statics.PLAYERS if p.id == self.statics.PLAYER_ID and p.map_tile == 3])), 67, 19),
+        ('Market. m: {}, t: {}, i: {} '.format(self.statics.MAP_PLAGUE[3],
+          self.statics.MAP_PLAGUE[3] + sum([p.plague for p in self.statics.PLAYERS if p.map_tile == 4]),
+          sum([p.plague for p in self.statics.PLAYERS if p.id == self.statics.PLAYER_ID and p.map_tile == 4])), 0, 38),
+        ('Village. m: {}, t: {}, i: {} '.format(self.statics.MAP_PLAGUE[4],
+          self.statics.MAP_PLAGUE[4] + sum([p.plague for p in self.statics.PLAYERS if p.map_tile == 5]),
+          sum([p.plague for p in self.statics.PLAYERS if p.id == self.statics.PLAYER_ID and p.map_tile == 5])), 33, 38),
+        ('Farm. m: {}, t: {}, i: {} '.format(self.statics.MAP_PLAGUE[5],
+          self.statics.MAP_PLAGUE[5] + sum([p.plague for p in self.statics.PLAYERS if p.map_tile == 6]),
+          sum([p.plague for p in self.statics.PLAYERS if p.id == self.statics.PLAYER_ID and p.map_tile == 6])), 67, 38)]).image()
     self.map_walker.append(map_)
 
     drawn_cards = store.list_cards(self.statics.BOARD_DB_NAME)

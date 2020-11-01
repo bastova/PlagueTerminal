@@ -65,6 +65,15 @@ class Hand(Deck):
       self.draw(len(self.playable_hand))
     return
 
+  def trash(self, i):
+    if i >= len(self.playable_hand):
+      return
+    if not self.playable_hand[i]:
+      return
+    c = self.playable_hand[i]
+    self.playable_hand[i] = None
+    super(Hand, self).trash(c)
+
   def draw(self, n=1):
     result = super(Hand, self).draw(n)
     self.playable_hand = result
