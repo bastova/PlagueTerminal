@@ -109,7 +109,7 @@ def load_images(statics):
 
 
 def load_cards(statics):
-  event_cards_values_range = sheets_connector.get_range(sheets_connector.EVENTS_SHEET_NAME, 2, 25, 0, 4)
+  event_cards_values_range = sheets_connector.get_range(sheets_connector.EVENTS_SHEET_NAME, 2, 26, 0, 4)
   for i in range(len(event_cards_values_range)):
     statics.EVENT_CARDS.append(cards.create_event_card(i, event_cards_values_range[i]))
   plague_cards_values_range = sheets_connector.get_range(sheets_connector.PLAGUE_SHEET_NAME, 2, 12, 0, 1)
