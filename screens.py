@@ -436,6 +436,10 @@ class GameScreen(BaseScreen):
     self.drawn_cards_menu = urwid.ListBox(self.drawn_cards_walker)
     self.map_walker = urwid.SimpleFocusListWalker([])
     self.map_menu = urwid.ListBox(self.map_walker)
+    self.players_walker = urwid.SimpleFocusListWalker([])
+    self.players_menu = urwid.ListBox(self.players_walker)
+    self.hand_cards_walker = urwid.SimpleFocusListWalker([])
+    self.hand_cards_menu = urwid.ListBox(self.hand_cards_walker)
     self.drawn_cards = []
     if self.statics.CHARACTER_ID == 1:
       hand_ids = [8, 9, 10, 11, 12]
@@ -461,26 +465,6 @@ class GameScreen(BaseScreen):
     self._change_to_menu_screen(0)
     self._start_sync()
 
-  def _player_columns(self):
-    player_columns = []
-    for player in self.statics.PLAYERS:
-      image = self.statics.KNIGHT_IMAGE
-      if player.character_id == 1:
-        image = self.statics.KNIGHT_IMAGE
-      elif player.character_id == 2:
-        image = self.statics.PRIEST_IMAGE
-      elif player.character_id == 3:
-        image = self.statics.PEASANT_IMAGE
-      elif player.character_id == 4:
-        image = self.statics.TRADER_IMAGE
-      player_columns.append(get_image_widget(image).image())
-      player_columns.append(urwid.Pile([urwid.Text('{}'.format(player.name)),
-          urwid.Text('Gold: {}'.format(player.gold)),
-          urwid.Text('Points: {}'.format(player.points)),
-          urwid.Text('Plague: {}'.format(player.plague)),
-          urwid.Text('Map tile: {}'.format(player.map_tile))]))
-    return player_columns
-
   def _build_game_screen(self):
     hold_items = []
     for card in self.statics.HOLD:
@@ -496,7 +480,7 @@ class GameScreen(BaseScreen):
           urwid.Text("{}\n{}".format(card.name, card.effect))])))
     hold_pile = urwid.Pile(hold_items)
 
-    body = [urwid.Columns(self._player_columns()), urwid.Columns([urwid.BoxAdapter(self.drawn_cards_menu, 22), hold_pile])]
+    body = [urwid.BoxAdapter(self.players_menu, 22), urwid.Columns([urwid.BoxAdapter(self.drawn_cards_menu, 22), hold_pile])]
     body.extend([urwid.Text("Commands:"), urwid.Divider()])
     general_commands_pile = [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for 
       c in [("Look at hand", self._look_at_hand),
@@ -525,23 +509,6 @@ class GameScreen(BaseScreen):
     return urwid.Pile(body)
 
   def _build_hand_screen(self):
-    hand_items = []
-    if self.statics.HAND:
-      for i in xrange(len(self.statics.HAND.playable_hand)):
-        card = self.statics.HAND.playable_hand[i]
-        image = self.statics.CHARACTER_IMAGE
-        text = ''
-        if card:
-          text = u"{}\n{}\n{}".format(card.name, card.description, card.effect)
-          if card.type == 'character':
-            image = self.statics.CHARACTER_IMAGE
-          elif card.type == 'triumph':
-            image = self.statics.TRIUMPH_IMAGE
-        else:
-          image = self.statics.PLAGUE_IMAGE
-        hand_items.append(urwid.LineBox(urwid.Columns([get_image_widget(image).image(), urwid.Text(text)])))
-    hand_pile = urwid.Pile(hand_items)
-    
     hold_items = []
     for card in self.statics.HOLD:
       image = self.statics.EVENT_IMAGE
@@ -555,7 +522,7 @@ class GameScreen(BaseScreen):
           get_image_widget(image).image(),
           urwid.Text("{}\n{}".format(card.name, card.effect))])))
     hold_pile = urwid.Pile(hold_items)
-    body = [urwid.Columns([hand_pile, hold_pile])]
+    body = [urwid.Columns([urwid.BoxAdapter(self.hand_cards_menu, 56), hold_pile])]
     play_cards_pile = [urwid.Text("Play card:")] + [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for
       c in [("1", self._play_card), ("2", self._play_card), ("3", self._play_card), ("4", self._play_card), ("5", self._play_card)]]
     trash_cards_pile = [urwid.Text("Trash card:")] + [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for
@@ -571,9 +538,42 @@ class GameScreen(BaseScreen):
     move_pile = [urwid.Text("Move to:"), urwid.Divider()] + [urwid.AttrMap(self._build_button(c[0], c[1]), None, focus_map='reversed') for
       c in [("Church", self._map_move), ("Harbour", self._map_move), ("Castle", self._map_move),
         ("Market", self._map_move), ("Village", self._map_move), ("Farm", self._map_move)]]
-    body = [urwid.Columns(self._player_columns()), urwid.Columns([urwid.BoxAdapter(self.map_menu, 42), urwid.Pile(move_pile)]),
+    body = [urwid.BoxAdapter(self.players_menu, 22), urwid.Columns([urwid.BoxAdapter(self.map_menu, 42), urwid.Pile(move_pile)]),
       urwid.Divider(), urwid.AttrMap(self._build_button("Back", self._map_back), None, focus_map='reversed')]
     return urwid.Pile(body)
+
+  def _player_columns(self):
+    player_columns = []
+    for player in self.statics.PLAYERS:
+      image = self.statics.KNIGHT_IMAGE
+      if player.character_id == 1:
+        image = self.statics.KNIGHT_IMAGE
+      elif player.character_id == 2:
+        image = self.statics.PRIEST_IMAGE
+      elif player.character_id == 3:
+        image = self.statics.PEASANT_IMAGE
+      elif player.character_id == 4:
+        image = self.statics.TRADER_IMAGE
+      player_columns.append(get_image_widget(image).image())
+      tile_name = ''
+      if player.map_tile == 1:
+        tile_name = 'Church'
+      elif player.map_tile == 2:
+        tile_name = 'Harbour'
+      elif player.map_tile == 3:
+        tile_name = 'Castle'
+      elif player.map_tile == 4:
+        tile_name = 'Market'
+      elif player.map_tile == 5:
+        tile_name = 'Village'
+      elif player.map_tile == 6:
+        tile_name = 'Farm'
+      player_columns.append(urwid.Pile([urwid.Text('{}'.format(player.name)),
+          urwid.Text('Gold: {}'.format(player.gold)),
+          urwid.Text('Points: {}'.format(player.points)),
+          urwid.Text('Plague: {}'.format(player.plague)),
+          urwid.Text('Map tile: {} - {}'.format(player.map_tile, tile_name))]))
+    return player_columns
 
   def _on_command_change(self, edit, new_edit_text):
    self.command = new_edit_text
@@ -605,9 +605,11 @@ class GameScreen(BaseScreen):
 
   def _play_card(self, button, choice):
     self.statics.HAND.play(int(choice) - 1)
+    self.do_sync()
 
   def _trash_hand_card(self, button, choice):
     self.statics.HAND.trash(int(choice) - 1)
+    self.do_sync()
 
   def _unhold_card(self, button, choice):
     id = int(choice) - 1
@@ -682,7 +684,7 @@ class GameScreen(BaseScreen):
   def do_sync(self):
     # TODO: have a huge try-catch
     # TODO: hold cards from hand
-    # TODO: add characters to map screen, and add extra counts to the map for better plague tracking.
+    # TODO: move card from hold to hand
     self.map_walker[:] = []
     map_tiles = store.list_map_tiles(self.statics.BOARD_DB_NAME)
     for i in xrange(len(map_tiles)):
@@ -730,7 +732,6 @@ class GameScreen(BaseScreen):
         center_x = 84
         center_y = 30
       player_image_widget_pos_list.append((get_image_widget(image_token), center_x + x, center_y + y))
-    my_plague = sum([p.plague for p in self.statics.PLAYERS if p.id == self.statics.PLAYER_ID])
     map_ = get_layered_image_widget(get_image_widget(self.statics.MAP_IMAGE),
       image_widget_pos_list=player_image_widget_pos_list,
       text_pos_list=[('Church. m: {}, t: {}, i: {} '.format(self.statics.MAP_PLAGUE[0],
@@ -774,4 +775,24 @@ class GameScreen(BaseScreen):
         image = self.statics.TRIUMPH_IMAGE
         text = "{}\n{}\n{}\n{}".format(card.name, card.description, card.effect, card.cost)
       self.drawn_cards_walker.append(urwid.LineBox(urwid.Columns([get_image_widget(image).image(), urwid.Text(text)])))
+
+    self.players_walker[:] = []
+    self.players_walker.append(urwid.Columns(self._player_columns()))
+
+    self.hand_cards_walker[:] = []
+    if self.statics.HAND:
+      for i in xrange(len(self.statics.HAND.playable_hand)):
+        card = self.statics.HAND.playable_hand[i]
+        image = self.statics.CHARACTER_IMAGE
+        text = ''
+        if card:
+          text = u"{}\n{}\n{}".format(card.name, card.description, card.effect)
+          if card.type == 'character':
+            image = self.statics.CHARACTER_IMAGE
+          elif card.type == 'triumph':
+            image = self.statics.TRIUMPH_IMAGE
+        else:
+          image = self.statics.PLAGUE_IMAGE
+        self.hand_cards_walker.append(urwid.LineBox(urwid.Columns([get_image_widget(image).image(), urwid.Text(text)])))
+
 
