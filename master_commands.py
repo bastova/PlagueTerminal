@@ -64,6 +64,20 @@ def discard_card(statics, input_, screen):
     pass
 
 
+def shuffle_in_card(statics, input_, screen):
+  try:
+    id = int(input_)
+    if id <= len(screen.drawn_cards):
+      card = screen.drawn_cards[id-1]
+      screen.drawn_cards = screen.drawn_cards[:id-1] + screen.drawn_cards[id:]
+      screen.deck.shuffle_in(card)
+      store.delete_cards(statics.BOARD_DB_NAME)
+      for card in screen.drawn_cards:
+        store.put_card(statics.BOARD_DB_NAME, card.to_json_dict())
+  except:
+    pass
+
+
 def put_back_card(statics, input_, screen):
   try:
     id = int(input_)

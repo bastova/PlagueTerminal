@@ -43,6 +43,12 @@ class Deck(object):
     self.deck += cards
     self.shuffle()
 
+  def shuffle_in(self, card):
+    index = random.randint(0, len(self.active_deck))
+    left = self.active_deck[:index]
+    right = self.active_deck[index:]
+    self.active_deck = left + [card] + right
+
 
 class Hand(Deck):
   def __init__(self, cards):

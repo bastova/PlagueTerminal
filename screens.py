@@ -493,6 +493,7 @@ class GameScreen(BaseScreen):
         c in [("Draw cards", self._draw_cards),
           ("Discard card", self._discard_card),
           ("Trash card", self._trash_card),
+          ("Shuffle in card", self._shuffle_in_card),
           ("Add gold", self._add_gold),
           ("Add points", self._add_points),
           ("Add plague", self._add_plague),
@@ -647,6 +648,10 @@ class GameScreen(BaseScreen):
 
   def _discard_card(self, button, choice):
     master_commands.discard_card(self.statics, self.command, self)
+    self._reset_command()
+
+  def _shuffle_in_card(self, button, choice):
+    master_commands.shuffle_in_card(self.statics, self.command, self)
     self._reset_command()
 
   def _trash_card(self, button, choice):
